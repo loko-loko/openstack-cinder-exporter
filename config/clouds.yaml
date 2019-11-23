@@ -1,0 +1,10 @@
+clouds:
+  openstack_name:
+    enabled: true
+    region_name: RegionOne
+    username: admin
+    password: secret
+    domain_name: default
+    project_name: admin
+    project_domain_name: default
+    auth_url: http://<keystone_ip>/identity

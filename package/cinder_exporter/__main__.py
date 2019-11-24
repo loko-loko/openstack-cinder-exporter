@@ -42,16 +42,15 @@ def arg_parser():
 
 def main():
 
-    collector_pid = os.getpid()
-    pid_file = "/var/run/purestorage-exporter.pid"
+    error_msg = "Collector could not run"
 
-    if os.path.isfile(pid_file):
-        print("Existing pid file is present, not running")
-        sys.exit(1)
+    collector_pid = os.getpid()
+    pid_file = "/var/run/cinder-exporter.pid"
 
     args = arg_parser()
 
     log_level = "DEBUG" if args.debug else "INFO"
+
     logger.remove()
     logger.add(
         sys.stderr,
@@ -59,7 +58,9 @@ def main():
         format="{time:YYYY/MM/DD HH:mm:ss}  {level:<7} - {message}"
     )
 
-    error_msg = "Collector could not run"
+    if os.path.isfile(pid_file):
+        logger.error(f"{error_msg}: Existing pid file is present")
+        exit(1)
 
     auths = get_cloud_config(args.cloud_config)
     openstacks = auths.keys()
@@ -84,15 +85,17 @@ def main():
             time.sleep(10)
 
     except ValueError as ve:
-        logger.exception(error_msg, ve)
+        logger.error(f"{error_msg}: {ve}")
+        exit(1)
     except ImportError as ie:
-        logger.exception(error_msg, ie)
+        logger.error(f"{error_msg}: {ie}")
+        exit(1)
     except AttributeError as ae:
-        logger.exception(error_msg, ae)
+        logger.error(f"{error_msg}: {ae}")
+        exit(1)
     except PermissionError as pe:
-        logger.exception(error_msg, pe)
-        print(error_msg, pe)
-        sys.exit(1)
+        logger.error(f"{error_msg}: {pe}")
+        exit(1)
 
 if __name__ == "__main__":
     main()

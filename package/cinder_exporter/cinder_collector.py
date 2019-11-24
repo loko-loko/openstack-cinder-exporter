@@ -9,7 +9,7 @@ class CinderCollector:
     def __init__(self, name, auth):
         self.name = name
         self._client = self._get_client(auth)
-    
+
     def _get_client(self, auth):
         logger.debug(f"Get openstack client: {self.name}")
         client = connection.Connection(
@@ -27,17 +27,17 @@ class CinderCollector:
         client.authorize()
         client.block_storage
         return client
-    
+
     @staticmethod
     def _get_volume_data(vdata, labels):
         data = {}
         for label in labels:
             data[label] = str(vdata.get(label))
-            
+
         data["account_id"] = format_project_id(data["project_id"])
-        
+
         return [data[k] for k in sorted(data.keys())]
-        
+
     def volume_size(self):
         logger.debug(f"Get collect of volume size: {self.name}")
         volumes = self._client.block_storage.volumes(all_projects=True)
@@ -59,11 +59,11 @@ class CinderCollector:
             "Cinder volumes information",
             labels=labels
         )
- 
+
         for volume in volumes:
             metric = float(volume["size"])
             data = self._get_volume_data(volume, labels)
-            
+
             volumes_metrics.add_metric(data, metric)
 
         yield volumes_metrics 

@@ -16,7 +16,7 @@ from cinder_exporter.common import get_cloud_config
 def arg_parser():
 
     parser = argparse.ArgumentParser()
-    
+
     parser.add_argument(
         "-f",
         "--cloud-config",
@@ -36,19 +36,19 @@ def arg_parser():
         action="store_true",
         help="Debug Mode"
     )
-    
+
     return parser.parse_args()
 
 
 def main():
-    
+
     collector_pid = os.getpid()
     pid_file = "/var/run/purestorage-exporter.pid"
-    
+
     if os.path.isfile(pid_file):
         print("Existing pid file is present, not running")
         sys.exit(1)
-    
+
     args = arg_parser()
 
     log_level = "DEBUG" if args.debug else "INFO"
@@ -63,7 +63,7 @@ def main():
 
     auths = get_cloud_config(args.cloud_config)
     openstacks = auths.keys()
-    
+
     try:
         init_http_server(args.port)
 

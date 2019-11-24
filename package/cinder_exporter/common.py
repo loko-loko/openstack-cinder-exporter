@@ -7,11 +7,11 @@ def format_project_id(project_id):
     for num in [8, 12, 16, 20, 32]:
         split_lst.append(project_id[last_num:num])
         last_num = num
-        
+
     return "-".join(split_lst)
-    
+
 def get_cloud_config(config_file):
-    
+
     logger.debug(f"Get yaml config file: {config_file}")
     try:
         with open(config_file) as f:

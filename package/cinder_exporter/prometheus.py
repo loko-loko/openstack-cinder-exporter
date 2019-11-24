@@ -19,9 +19,9 @@ def init_http_server(port):
         'version': cinder_exporter.__version__,
         'running_on': hostname
     })
-    
+
     logger.info(f"Prometheus web server started: {hostname}:{port}")
-    
+
 class CollectMany:
 
     def __init__(self, collectors):

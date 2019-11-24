@@ -29,6 +29,28 @@ When exporting is done, you can see metrics on host exposed port :
 $ curl 127.0.0.1:8888
 [...]
 # TYPE cinder_volumes_info_size gauge
-cinder_volumes_info_size{account_id="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",availability_zone="nova",created_at="2019-11-18T00:35:05.000000",host="openstack@lvmdriver-1#lvmdriver-1",id="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",metadata="{}",name="vol_2",project_id="xxxxxxxxxxxxxxxxxxxxxxxxxxxx",status="available",volume_type="lvmdriver-1"} 1.0
-cinder_volumes_info_size{account_id="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",availability_zone="nova",created_at="2019-11-17T21:41:36.000000",host="openstack@lvmdriver-1#lvmdriver-1",id="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",metadata="{'test': 'hello'}",name="vol",project_id="xxxxxxxxxxxxxxxxxxxxxxxxxxxx",status="available",volume_type="lvmdriver-1"} 1.0
+cinder_volumes_info_size{
+    account_id="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+    availability_zone="nova",
+    created_at="2019-11-18T00:35:05.000000",
+    host="openstack@lvmdriver-1#lvmdriver-1",
+    id="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+    metadata="",
+    name="vol_2",
+    project_id="xxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    status="available",
+    volume_type="lvmdriver-1"
+} 1.0
+cinder_volumes_info_size{
+    account_id="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+    availability_zone="nova",
+    created_at="2019-11-17T21:41:36.000000",
+    host="openstack@lvmdriver-1#lvmdriver-1",
+    id="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+    metadata="key=value",
+    name="vol",
+    project_id="xxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    status="available",
+    volume_type="lvmdriver-1"
+} 1.0
 ```

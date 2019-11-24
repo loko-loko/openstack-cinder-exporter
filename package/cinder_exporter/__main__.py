@@ -21,7 +21,7 @@ def arg_parser():
         "-f",
         "--cloud-config",
         required=True,
-        help="Cloud config file with Openstack information"
+        help="Cloud config file with Openstack auth. info"
     )
     parser.add_argument(
         "-p",

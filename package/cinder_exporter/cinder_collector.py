@@ -2,7 +2,7 @@ from prometheus_client.core import GaugeMetricFamily, InfoMetricFamily
 from openstack import connection
 from loguru import logger
 
-from cinder_exporter.common import format_project_id
+from cinder_exporter.common import format_id, format_metadata
 
 class CinderCollector:
 
@@ -32,11 +32,12 @@ class CinderCollector:
     def _get_volume_data(vdata, labels):
         data = {}
         for label in labels:
-            data[label] = str(vdata.get(label))
+            data[label] = vdata.get(label)
 
-        data["account_id"] = format_project_id(data["project_id"])
+        data["account_id"] = format_id(data["project_id"])
+        data["metadata"] = format_metadata(data["metadata"])
 
-        return [data[k] for k in sorted(data.keys())]
+        return [str(data[k]) for k in sorted(data.keys())]
 
     def volume_size(self):
         logger.debug(f"Get collect of volume size: {self.name}")

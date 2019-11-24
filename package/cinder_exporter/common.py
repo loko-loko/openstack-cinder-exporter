@@ -1,14 +1,21 @@
 import yaml
 from loguru import logger
 
-def format_project_id(project_id):
+def format_id(project_id):
     last_num = 0
-    split_lst = []
+    result = []
     for num in [8, 12, 16, 20, 32]:
-        split_lst.append(project_id[last_num:num])
+        result.append(project_id[last_num:num])
         last_num = num
 
-    return "-".join(split_lst)
+    return "-".join(result)
+
+def format_metadata(mdata):
+    if mdata:
+        result = [f"{k}={v}" for k, v in mdata.items()]
+        return ",".join(result)
+
+    return ""
 
 def get_cloud_config(config_file):
 

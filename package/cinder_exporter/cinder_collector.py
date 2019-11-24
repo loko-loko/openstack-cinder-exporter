@@ -2,7 +2,7 @@ from prometheus_client.core import GaugeMetricFamily, InfoMetricFamily
 from openstack import connection
 from loguru import logger
 
-from cinder_exporter.common import format_id, format_metadata
+from cinder_exporter.common import format_id, format_metadata, format_attachments
 
 class CinderCollector:
 
@@ -36,6 +36,7 @@ class CinderCollector:
 
         data["account_id"] = format_id(data["project_id"])
         data["metadata"] = format_metadata(data["metadata"])
+        data["attachments"] = format_attachments(data["attachments"])
 
         return [str(data[k]) for k in sorted(data.keys())]
 
@@ -52,7 +53,8 @@ class CinderCollector:
             "availability_zone",
             "status",
             "account_id",
-            "metadata"
+            "metadata",
+            "attachments"
         ])
 
         volumes_metrics = GaugeMetricFamily(

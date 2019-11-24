@@ -17,6 +17,18 @@ def format_metadata(mdata):
 
     return ""
 
+def format_attachments(attachments):
+    if attachments:
+        result = []
+        for attachment in attachments:
+            result.append(
+                f"{attachment['server_id']}/"
+                f"{attachment['attached_at']}"
+            )
+        return ",".join(result)
+
+    return ""
+
 def get_cloud_config(config_file):
 
     logger.debug(f"Get yaml config file: {config_file}")

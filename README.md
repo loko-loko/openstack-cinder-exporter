@@ -31,6 +31,7 @@ $ curl 127.0.0.1:8888
 # TYPE cinder_volumes_info_size gauge
 cinder_volumes_info_size{
     account_id="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+    attachments="0e3bb45e-b730-46ef-9129-5f0041f2c044/2019-11-18T14:13:12.000000"
     availability_zone="nova",
     created_at="2019-11-18T00:35:05.000000",
     host="openstack@lvmdriver-1#lvmdriver-1",
@@ -43,6 +44,7 @@ cinder_volumes_info_size{
 } 1.0
 cinder_volumes_info_size{
     account_id="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+    attachments=""
     availability_zone="nova",
     created_at="2019-11-17T21:41:36.000000",
     host="openstack@lvmdriver-1#lvmdriver-1",

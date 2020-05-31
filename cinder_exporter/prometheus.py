@@ -1,5 +1,5 @@
 import socket
-from loguru import logger
+from loguru import logger as log
 
 from prometheus_client import Info, start_http_server
 
@@ -7,7 +7,7 @@ import cinder_exporter
 
 def init_http_server(port):
     hostname = socket.gethostname()
-    logger.debug(f"Start Prometheus web server: {hostname}:{port} ..")
+    log.debug(f"Start Prometheus web server: {hostname}:{port} ..")
     
     start_http_server(port)
 
@@ -20,7 +20,7 @@ def init_http_server(port):
         'running_on': hostname
     })
 
-    logger.info(f"Prometheus web server started: {hostname}:{port}")
+    log.info(f"Prometheus web server started: {hostname}:{port}")
 
 class CollectMany:
 

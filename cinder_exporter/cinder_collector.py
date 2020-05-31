@@ -1,3 +1,4 @@
+import re
 from os import rename
 from time import time, sleep
 from threading import Thread
@@ -8,6 +9,9 @@ from openstack import connection
 from prometheus_client.core import GaugeMetricFamily, InfoMetricFamily
 
 from cinder_exporter.common import write_dump_data_to_file, read_dump_data_from_file
+
+
+RE_CAMEL_TO_SNAKE = re.compile(r"(?<!^)(?=[A-Z])")
 
 
 class DataDumpCollect(Thread):
@@ -51,9 +55,14 @@ class DataDumpCollect(Thread):
         return [v.to_dict() for v in volumes]
 
     def _get_limits(self, projects):
-        limits = {}
-        for key in projects.keys():
-            limits[key] = self._client.get_volume_limits(key)["absolute"]
+        limits = []
+        for pid, pname in projects.items():
+            limit = {
+                "project_id": pid,
+                "project_name": pname,
+            }
+            limit.update(self._client.get_volume_limits(pid)["absolute"])
+            limits.append(limit)
         return limits
 
     def run(self):
@@ -104,6 +113,71 @@ class CinderCollector:
         if attachments:
             return ",".join([a["server_id"] for a in attachments])
         return ""
+
+    def limits(self):
+        log.debug(f"Get collect of limits: {self.name}")
+        # Get limits from cache file
+        limits = read_dump_data_from_file(
+            dump_file=self._file_dump,
+            item="limits"
+        )
+        labels = [
+            "stack",
+            "project_id",
+            "project_name",
+        ]
+        for klimit, vlimit in limits[0].items():
+            if not isinstance(vlimit, (int, float)):
+                continue
+            # Convert limit name to snake case
+            klimit_fmt = RE_CAMEL_TO_SNAKE.sub("_", klimit).lower()
+            limits_metrics = GaugeMetricFamily(
+                f"cinder_limit_{klimit_fmt}",
+                f"Cinder limits",
+                labels=labels
+            )
+            for limit in limits:
+                metric = limit[klimit]
+                data = [
+                    self.name,
+                    limit["project_id"],
+                    limit["project_name"],
+                ]
+                limits_metrics.add_metric(data, metric)
+
+            yield limits_metrics
+
+    def service_status(self):
+        log.debug(f"Get collect of services: {self.name}")
+        # Get services from cache file
+        services = read_dump_data_from_file(
+            dump_file=self._file_dump,
+            item="services"
+        )
+        labels = [
+            "stack",
+            "binary",
+            "host",
+            "status",
+            "availability_zone",
+        ]
+        services_metrics = GaugeMetricFamily(
+            "cinder_service_status",
+            "Cinder service status",
+            labels=labels
+        )
+        for service in services:
+            metric = 1 if service["state"] == "up" else 0
+            data = [
+                self.name,
+                service["binary"],
+                service["host"],
+                service["status"],
+                service["zone"],
+            ]
+            services_metrics.add_metric(data, metric)
+
+        yield services_metrics
 
     def volume_size(self):
         log.debug(f"Get collect of volumes: {self.name}")
@@ -175,5 +249,7 @@ class CinderCollector:
 
         if self._collect_state:
             yield from self.volume_size()
+            yield from self.service_status()
+            yield from self.limits()
 
         yield collect_metric

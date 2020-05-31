@@ -4,11 +4,19 @@ ENV PYTHONUNBUFFERED 1
 
 WORKDIR /exporter
 
-ADD ./package /exporter
+ADD . /exporter
 
-RUN apk add --no-cache --virtual .build-deps gcc musl-dev openssl-dev libffi-dev && \
-      pip install -e /exporter && \
-      apk del .build-deps gcc musl-dev openssl-dev libffi-dev
+RUN apk add --no-cache --virtual .build-deps \
+        gcc \
+        musl-dev \
+        openssl-dev \
+        libffi-dev \
+      && pip install -e /exporter \
+      && apk del .build-deps \
+        gcc \
+        musl-dev \
+        openssl-dev \
+        libffi-dev
 
 ADD ./entrypoint.sh  /
 

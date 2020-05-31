@@ -1,17 +1,27 @@
-from prometheus_client.core import GaugeMetricFamily, InfoMetricFamily
+from os import rename
+from time import time, sleep
+from threading import Thread
+from pprint import pformat
+
+from loguru import logger as log
 from openstack import connection
-from loguru import logger
+from prometheus_client.core import GaugeMetricFamily, InfoMetricFamily
 
-from cinder_exporter.common import format_id, format_metadata, format_attachments
+from cinder_exporter.common import write_dump_data_to_file, read_dump_data_from_file
 
-class CinderCollector:
 
-    def __init__(self, name, auth):
+class DataDumpCollect(Thread):
+
+    def __init__(self, name, auth, file_dump, refresh_interval=300):
+        Thread.__init__(self)
         self.name = name
-        self._client = self._get_client(auth)
+        self._client = self._get_client(name, auth)
+        self._file_dump = file_dump
+        self._refresh_interval = refresh_interval
 
-    def _get_client(self, auth):
-        logger.debug(f"Get openstack client: {self.name}")
+    @staticmethod
+    def _get_client(name, auth):
+        log.debug(f"Get openstack client: {name}")
         client = connection.Connection(
             region_name=auth["region_name"],
             auth=dict(
@@ -28,48 +38,142 @@ class CinderCollector:
         client.block_storage
         return client
 
+    def _get_projects(self):
+        projects = self._client.list_projects()
+        return {p["id"]: p["name"] for p in projects}
+
+    def _get_services(self):
+        services = self._client.block_storage.get("/os-services")
+        return [s for s in services.json()["services"]]
+
+    def _get_volumes(self):
+        volumes = self._client.block_storage.volumes(all_projects=True)
+        return [v.to_dict() for v in volumes]
+
+    def _get_limits(self, projects):
+        limits = {}
+        for key in projects.keys():
+            limits[key] = self._client.get_volume_limits(key)["absolute"]
+        return limits
+
+    def run(self):
+        log.debug(f"Starting data gather thread for: {self.name}")
+        # Init dump file
+        write_dump_data_to_file(dump_file=self._file_dump, data={"collect": 0})
+        # Start data collect with interval
+        while True:
+            start_time = time()
+            # Init data
+            data = {"collect": 0}
+            try:
+                # Get openstack data
+                projects = self._get_projects()
+                data.update({
+                    "volumes": self._get_volumes(),
+                    "services": self._get_services(),
+                    "projects": projects,
+                    "limits": self._get_limits(projects),
+                })
+            except Exception as e:
+                log.error(f"Error getting data for {self.name}: {e}")
+            else:
+                log.info(f"Done getting data for {self.name}")
+                # Update data with new value if collect OK
+                data.update({
+                    "collect": 1,
+                    "poll_time": time() - start_time
+                })
+            # Write new dump
+            log.debug(f"Data for {self.name}: {pformat(data)}")
+            new_file_dump = f"{self._file_dump}.new"
+            write_dump_data_to_file(dump_file=new_file_dump, data=data)
+            rename(new_file_dump, self._file_dump)
+            log.debug(f"Done dumping data for {self.name} to {self._file_dump}")
+            # Waiting for the next collect
+            sleep(self._refresh_interval)
+
+
+class CinderCollector:
+
+    def __init__(self, name, file_dump):
+        self.name = name
+        self._file_dump = file_dump
+
     @staticmethod
-    def _get_volume_data(vdata, labels):
-        data = {}
-        for label in labels:
-            data[label] = vdata.get(label)
-
-        data["account_id"] = format_id(data["project_id"])
-        data["metadata"] = format_metadata(data["metadata"])
-        data["attachments"] = format_attachments(data["attachments"])
-
-        return [str(data[k]) for k in sorted(data.keys())]
+    def _get_attachments(attachments):
+        if attachments:
+            return ",".join([a["server_id"] for a in attachments])
+        return ""
 
     def volume_size(self):
-        logger.debug(f"Get collect of volume size: {self.name}")
-        volumes = self._client.block_storage.volumes(all_projects=True)
-        labels = sorted([
+        log.debug(f"Get collect of volumes: {self.name}")
+        # Get projects from cache file
+        projects = read_dump_data_from_file(
+            dump_file=self._file_dump,
+            item="projects"
+        )
+        # Get volumes from cache file
+        volumes = read_dump_data_from_file(
+            dump_file=self._file_dump,
+            item="volumes"
+        )
+        labels = [
+            "stack",
             "id",
             "name",
             "created_at",
             "host",
             "project_id", 
+            "project_name", 
             "volume_type",
             "availability_zone",
             "status",
-            "account_id",
-            "metadata",
             "attachments"
-        ])
+        ]
 
         volumes_metrics = GaugeMetricFamily(
-            "cinder_volumes_info_size",
+            "cinder_volumes_size",
             "Cinder volumes information",
             labels=labels
         )
 
         for volume in volumes:
             metric = float(volume["size"])
-            data = self._get_volume_data(volume, labels)
-
+            data = [
+                self.name,
+                volume["id"],
+                volume["name"],
+                volume["created_at"],
+                volume["host"],
+                volume["project_id"],
+                projects.get(volume["project_id"], ""),
+                volume["volume_type"],
+                volume["availability_zone"],
+                volume["status"],
+                self._get_attachments(volume["attachments"]),
+            ]
             volumes_metrics.add_metric(data, metric)
 
-        yield volumes_metrics 
+        yield volumes_metrics
+
+    def collect_status(self):
+        # Get collect status from cache file
+        self._collect_state = bool(int(read_dump_data_from_file(
+            dump_file=self._file_dump,
+            item="collect"
+        )))
+        collect_metric = GaugeMetricFamily(
+            "cinder_collect_status",
+            "Cinder collect Status",
+            labels=["stack"]
+        )
+        collect_metric.add_metric([self.name], int(self._collect_state))
+        return collect_metric
 
     def collect(self):
-        yield from self.volume_size()
+        collect_metric = self.collect_status()
+
+        if self._collect_state:
+            yield from self.volume_size()
+
+        yield collect_metric
